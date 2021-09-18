@@ -285,8 +285,12 @@ function createDailyNote(stack) {
       .filter((line) => line.startsWith(todo) && line !== todo)
       .map((line) => line.replace(todo, "⧠ "))
       .slice(0, 4);
+
+    if (!notes.length) {
+      notes.push("✅ All done!");
+    }
   } else {
-    notes = ["No daily note."];
+    notes = ["☀️ Rise and shine!"];
   }
 
   notes.forEach((note) => {
