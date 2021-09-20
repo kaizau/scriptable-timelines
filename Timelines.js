@@ -9,30 +9,49 @@
 const birthday = new Date(1970, 0, 1); // Month starts with 0: 0 => Jan, 1 => Feb, 11 => Dec
 const estimatedLifespan = 75;
 
-const hideDefaultHolidayCalendar = true;
 const calendarUrl = "fantastical://";
+const hideDefaultHolidayCalendar = true;
 
-const enableNote = false;
-const noteFileBookmark = "Obsidian Daily Note";
-const noteFileExtension = "md";
+const enableDailyNote = false;
 const noteUrl = "obsidian://";
+const noteFileBookmark = "Obsidian Daily Note";
+const noteEmptyText = "☀️ Rise and shine!";
+
+//
+// Advanced Config
+//
+
+const now = new Date();
+const format = new DateFormat();
+
+const noteRelativePath = () => `${format.timestamp.string(now)}.md`;
+const noteProcessIntoLines = (note) => {
+  const lines = note
+    .split("\n")
+    .filter((line) => line.startsWith("- [ ] ") && line !== "- [ ] ")
+    .slice(0, 4)
+    .map((line) => line.replace("- [ ] ", "⧠ "));
+  if (!lines.length) {
+    lines.push("✅ All done!");
+  }
+  return lines;
+};
 
 //
 // Widget + Layout
 //
 
-const stackSpacing = enableNote ? 10 : 15;
-const timelineWidth = enableNote ? 50 : 70;
+const stackSpacing = enableDailyNote ? 10 : 15;
+const timelineWidth = enableDailyNote ? 50 : 70;
 const timelineHeight = 4;
 const calendarWidth = 115;
 const noteWidth = 115;
+const lineLimit = 3;
 const colorBackground = Color.dynamic(
   new Color("#ffffff", 0.25),
   new Color("#222222", 0.25)
 );
 const colorText = Color.dynamic(new Color("#222222"), new Color("#ffffff"));
-const now = new Date();
-const format = new DateFormat();
 
 const widget = new ListWidget();
 widget.backgroundColor = colorBackground;
@@ -46,7 +65,7 @@ createTimeline(timelineCol);
 const calendarCol = addColumn(wrapper);
 await createCalendar(calendarCol);
 
-if (enableNote) {
+if (enableDailyNote) {
   calendarCol.size = new Size(calendarWidth, 0);
   const noteCol = addColumn(wrapper);
   noteCol.size = new Size(noteWidth, 0);
@@ -113,7 +132,7 @@ function createTimeline(stack) {
     now.getFullYear().toString()
   );
 
-  let lastBirthday = new Date(
+  const lastBirthday = new Date(
     now.getFullYear(),
     birthday.getMonth(),
     birthday.getDate()
@@ -189,8 +208,6 @@ function createProgressBar(total, elapsed) {
 //
 // Calendar
 //
-// NOTE: Using magic numbers and &nbsp; for spacing.
-//
 
 async function createCalendar(stack) {
   stack.url = calendarUrl;
@@ -224,15 +241,17 @@ function createCalendarEvent(stack, event) {
     symbol.textColor = event.calendar.color;
 
     const eventTitle = item.addText(event.title);
+    eventTitle.lineLimit = lineLimit;
     eventTitle.textColor = colorText;
     eventTitle.font = Font.systemFont(11);
   }
 
   // Timed event
   else {
-    const symbol = item.addText("\u2B24  ");
+    const symbol = item.addText("\u2B24");
     symbol.font = Font.systemFont(4);
     symbol.textColor = event.calendar.color;
+    item.addSpacer(4);
 
     let dateString = "";
     const todayDate = format.date.string(now);
@@ -254,8 +273,9 @@ function createCalendarEvent(stack, event) {
 
     // Add directly to calendar stack to avoid making layout more complex
     const eventDetails = stack.addStack();
-    eventDetails.setPadding(0, 8, 0, 0);
+    eventDetails.setPadding(0, 9, 0, 0);
     const eventTitle = eventDetails.addText(event.title);
+    eventTitle.lineLimit = lineLimit;
     eventTitle.textColor = colorText;
     eventTitle.font = Font.systemFont(11);
   }
@@ -264,7 +284,7 @@ function createCalendarEvent(stack, event) {
 }
 
 //
-// Daily Notes
+// Daily Note
 //
 
 function createDailyNote(stack) {
@@ -272,30 +292,19 @@ function createDailyNote(stack) {
 
   const fm = FileManager.iCloud();
   const rootPath = fm.bookmarkedPath(noteFileBookmark);
-  const notePath = `${rootPath}/${format.timestamp.string(
-    now
-  )}.${noteFileExtension}`;
+  const notePath = `${rootPath}/${noteRelativePath()}`;
 
-  let notes;
+  let lines;
   if (fm.fileExists(notePath)) {
-    const todo = "- [ ] ";
-    notes = fm
-      .readString(notePath)
-      .split("\n")
-      .filter((line) => line.startsWith(todo) && line !== todo)
-      .map((line) => line.replace(todo, "⧠ "))
-      .slice(0, 4);
-
-    if (!notes.length) {
-      notes.push("✅ All done!");
-    }
+    lines = noteProcessIntoLines(fm.readString(notePath));
   } else {
-    notes = ["☀️ Rise and shine!"];
+    lines = [noteEmptyText];
   }
 
-  notes.forEach((note) => {
-    const text = stack.addText(note);
+  lines.forEach((line) => {
+    const text = stack.addText(line);
     text.textColor = colorText;
+    text.lineLimit = lineLimit;
     text.font = Font.regularMonospacedSystemFont(11);
     stack.addSpacer(4);
   });
