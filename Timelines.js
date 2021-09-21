@@ -10,9 +10,9 @@ const birthday = new Date(1970, 0, 1); // Month starts with 0: 0 => Jan, 1 => Fe
 const estimatedLifespan = 75;
 
 const calendarUrl = "fantastical://";
-const hideDefaultHolidayCalendar = true;
+const calendarsToHide = [/^\w+ Holidays$/, "Hide This Calendar"];
 
-const enableDailyNote = false;
+const enableDailyNote = true;
 const noteUrl = "obsidian://";
 const noteFileBookmark = "Obsidian Daily Note";
 const noteEmptyText = "☀️ Rise and shine!";
@@ -214,17 +214,13 @@ async function createCalendar(stack) {
 
   const events = await CalendarEvent.today();
   events
-    .filter((event) => {
-      if (
-        hideDefaultHolidayCalendar &&
-        event.calendar.isSubscribed &&
-        !event.calendar.allowsContentModifications &&
-        event.calendar.title.match(/^\w+ Holidays$/)
-      ) {
-        return false;
-      }
-      return true;
-    })
+    .filter((event) =>
+      calendarsToHide.every((pattern) =>
+        pattern instanceof RegExp
+          ? !event.calendar.title.match(pattern)
+          : pattern.trim() !== event.calendar.title.trim()
+      )
+    )
     .filter((event) => event.endDate > now)
     .slice(0, 4)
     .forEach((event) => createCalendarEvent(stack, event));
