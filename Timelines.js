@@ -287,7 +287,7 @@ function createCalendarEvent(stack, event) {
 // Daily Note
 //
 
-function createDailyNote(stack) {
+async function createDailyNote(stack) {
   stack.url = noteUrl;
 
   const fm = FileManager.iCloud();
@@ -296,6 +296,9 @@ function createDailyNote(stack) {
 
   let lines;
   if (fm.fileExists(notePath)) {
+    if (!fm.isFileDownloaded(notePath)) {
+      await fm.downloadFileFromiCloud(notePath);
+    }
     lines = noteProcessIntoLines(fm.readString(notePath));
   } else {
     lines = [noteEmptyText];
