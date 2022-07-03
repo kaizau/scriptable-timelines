@@ -41,11 +41,31 @@ const noteProcessIntoLines = (note) => {
 // Widget + Layout
 //
 
-const stackSpacing = enableDailyNote ? 10 : 15;
-const timelineWidth = enableDailyNote ? 50 : 70;
-const timelineHeight = 4;
-const calendarWidth = 115;
-const noteWidth = 115;
+let stackSpacing = enableDailyNote ? 10 : 15;
+let timelineWidth = enableDailyNote ? 50 : 70;
+let timelineHeight = 4;
+let calendarWidth = 115;
+let noteWidth = 115;
+let fontNormal = 11;
+let fontCalendarAllDaySymbol = 9;
+let fontCalendarTimedSymbol = 4;
+let fontCalendarTimed = 9;
+
+const isExtraLarge =
+  config.widgetFamily === "extraLarge" ||
+  (!config.widgetFamily && Device.isPad());
+if (isExtraLarge) {
+  stackSpacing = stackSpacing * 2;
+  timelineWidth = timelineWidth * 2;
+  timelineHeight = timelineHeight * 2;
+  calendarWidth = calendarWidth * 2;
+  noteWidth = noteWidth * 2;
+  fontNormal = 16;
+  fontCalendarAllDaySymbol = 13;
+  fontCalendarTimedSymbol = 7;
+  fontCalendarTimed = 13;
+}
+
 const lineLimit = 3;
 const colorBackground = Color.dynamic(
   new Color("#ffffff", 0.25),
@@ -55,6 +75,7 @@ const colorText = Color.dynamic(new Color("#222222"), new Color("#ffffff"));
 
 const widget = new ListWidget();
 widget.backgroundColor = colorBackground;
+
 const wrapper = widget.addStack();
 wrapper.spacing = stackSpacing;
 
@@ -72,9 +93,18 @@ if (enableDailyNote) {
   createDailyNote(noteCol);
 }
 
-Script.setWidget(widget);
+//
+// Run
+//
+
+if (config.runsInWidget) {
+  Script.setWidget(widget);
+} else if (Device.isPad()) {
+  widget.presentExtraLarge();
+} else {
+  widget.presentMedium();
+}
 Script.complete();
-widget.presentMedium();
 
 //
 // Util
@@ -176,7 +206,7 @@ function isLeapYear(year) {
 function createTimelineItem(stack, total, elapsed, label) {
   const title = stack.addText(label);
   title.textColor = colorText;
-  title.font = Font.systemFont(11);
+  title.font = Font.systemFont(fontNormal);
   stack.addSpacer(1);
   const img = stack.addImage(createProgressBar(total, elapsed));
   img.imageSize = new Size(timelineWidth, timelineHeight);
@@ -190,15 +220,19 @@ function createProgressBar(total, elapsed) {
   context.respectScreenScale = true;
   context.setFillColor(new Color("#48484b"));
   const path = new Path();
-  path.addRoundedRect(new Rect(0, 0, timelineWidth, timelineHeight), 2, 2);
+  path.addRoundedRect(
+    new Rect(0, 0, timelineWidth, timelineHeight),
+    timelineHeight / 2,
+    timelineHeight / 2
+  );
   context.addPath(path);
   context.fillPath();
   context.setFillColor(new Color("#ffd60a"));
   const path1 = new Path();
   path1.addRoundedRect(
     new Rect(0, 0, (timelineWidth * elapsed) / total, timelineHeight),
-    2,
-    2
+    timelineHeight / 2,
+    timelineHeight / 2
   );
   context.addPath(path1);
   context.fillPath();
@@ -233,19 +267,19 @@ function createCalendarEvent(stack, event) {
   // All day event
   if (event.isAllDay) {
     const symbol = item.addText("\u258D");
-    symbol.font = Font.systemFont(9);
+    symbol.font = Font.systemFont(fontCalendarAllDaySymbol);
     symbol.textColor = event.calendar.color;
 
     const eventTitle = item.addText(event.title);
     eventTitle.lineLimit = lineLimit;
     eventTitle.textColor = colorText;
-    eventTitle.font = Font.systemFont(11);
+    eventTitle.font = Font.systemFont(fontNormal);
   }
 
   // Timed event
   else {
     const symbol = item.addText("\u2B24");
-    symbol.font = Font.systemFont(4);
+    symbol.font = Font.systemFont(fontCalendarTimedSymbol);
     symbol.textColor = event.calendar.color;
     item.addSpacer(4);
 
@@ -265,7 +299,7 @@ function createCalendarEvent(stack, event) {
 
     const eventTime = item.addText(dateString);
     eventTime.textColor = colorText;
-    eventTime.font = Font.systemFont(9);
+    eventTime.font = Font.systemFont(fontCalendarTimed);
 
     // Add directly to calendar stack to avoid making layout more complex
     const eventDetails = stack.addStack();
@@ -273,7 +307,7 @@ function createCalendarEvent(stack, event) {
     const eventTitle = eventDetails.addText(event.title);
     eventTitle.lineLimit = lineLimit;
     eventTitle.textColor = colorText;
-    eventTitle.font = Font.systemFont(11);
+    eventTitle.font = Font.systemFont(fontNormal);
   }
 
   stack.addSpacer(4);
@@ -304,7 +338,7 @@ async function createDailyNote(stack) {
     const text = stack.addText(line);
     text.textColor = colorText;
     text.lineLimit = lineLimit;
-    text.font = Font.regularMonospacedSystemFont(11);
+    text.font = Font.regularMonospacedSystemFont(fontNormal);
     stack.addSpacer(4);
   });
 }
